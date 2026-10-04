@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ezvaarTV</title>
+<meta name="description" content="ezvaarTV – Free public live TV & radio player">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f1115'/><text x='50' y='68' font-size='52' text-anchor='middle' fill='%234ade80' font-family='system-ui,sans-serif' font-weight='700'>e</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0d11;
+    --panel: #14171e;
+    --border: #232833;
+    --text: #eef0f4;
+    --muted: #8b929e;
+    --accent: #4ade80;
+    --accent-hover: #86efac;
+    --hover: #1c212b;
+    --active: #243020;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 1.3rem;
+    letter-spacing: -0.03em;
+    user-select: none;
+  }
+  .logo .mark {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, #22c55e, #4ade80);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #0b0d11;
+    font-size: 1.1rem;
+    font-weight: 900;
+  }
+  .logo .name span { color: var(--accent); }
+  .now-playing {
+    flex: 1;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .now-playing strong { color: var(--text); }
+  .search-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    width: 200px;
+    font-size: 0.875rem;
+  }
+  .search-box:focus { outline: none; border-color: var(--accent); }
+  .main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+  .sidebar {
+    width: 320px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .groups {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+  .group-header {
+    padding: 10px 14px 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .group-header:hover { color: var(--accent); }
+  .channel {
+    padding: 8px 14px 8px 20px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    border-left: 3px solid transparent;
+    transition: background 0.12s;
+  }
+  .channel:hover { background: var(--hover); }
+  .channel.active {
+    background: var(--active);
+    border-left-color: var(--accent);
+    color: var(--accent-hover);
+  }
+  .channel .type {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-left: 5px;
+  }
+  .player-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    position: relative;
+  }
+  #video, #audio {
+    width: 100%;
+    height: 100%;
+    background: #000;
+  }
+  #audio { display: none; }
+  .placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    gap: 14px;
+    pointer-events: none;
+  }
+  .placeholder .big-logo {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, #22c55e, #4ade80);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    color: #0b0d11;
+    font-size: 2.4rem;
+    font-weight: 900;
+    opacity: 0.85;
+  }
+  .status {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: rgba(0,0,0,0.75);
+    padding: 5px 11px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .status.error { color: #f87171; }
+  .status.ok { color: var(--accent); }
+  .collapsed .channels { display: none; }
+  footer {
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    padding: 7px 18px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  @media (max-width: 700px) {
+    .sidebar { width: 100%; max-height: 38vh; }
+    .main { flex-direction: column-reverse; }
+    .search-box { width: 130px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="mark">e</div>
+    <div class="name">ezvaar<span>TV</span></div>
+  </div>
+  <div class="now-playing" id="nowPlaying">Select a channel</div>
+  <input type="search" class="search-box" id="search" placeholder="Search..." autocomplete="off">
+</header>
+
+<div class="main">
+  <aside class="sidebar">
+    <div class="groups" id="groups"></div>
+  </aside>
+  <div class="player-area">
+    <video id="video" controls playsinline></video>
+    <audio id="audio" controls></audio>
+    <div class="placeholder" id="placeholder">
+      <div class="big-logo">e</div>
+      <div>ezvaarTV</div>
+      <div style="font-size:0.85rem;opacity:0.7">Pick a channel to start watching</div>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<footer>
+  <span id="countInfo"></span>
+  <span>
+    <a href="https://github.com/ezvaar/tv" target="_blank">GitHub</a> ·
+    Free public streams · Not affiliated with broadcasters
+  </span>
+</footer>
+
+<script>
+const CHANNELS = [["SABC", [{"name": "SABC 1", "group": "SABC", "url": "https://sabconeta.cdn.mangomolo.com/sabc1/smil:sabc1.stream.smil/chunklist.m3u8"}, {"name": "SABC 2", "group": "SABC", "url": "https://sabctwota.cdn.mangomolo.com/sabc2/smil:sabc2.stream.smil/chunklist.m3u8"}, {"name": "SABC 3", "group": "SABC", "url": "https://sabctreta.cdn.mangomolo.com/sabc3/smil:sabc3.stream.smil/chunklist.m3u8"}, {"name": "SABC News", "group": "SABC", "url": "https://sabconetanw.cdn.mangomolo.com/news/smil:news.stream.smil/chunklist.m3u8"}, {"name": "SABC Sport", "group": "SABC", "url": "https://sabctwotasp.cdn.mangomolo.com/sport/smil:sport.stream.smil/chunklist.m3u8"}, {"name": "SABC Education", "group": "SABC", "url": "https://sabctretaed.cdn.mangomolo.com/edu/smil:edu.stream.smil/chunklist.m3u8"}, {"name": "SuperSport Schools", "group": "SABC", "url": "https://sabctretasch.cdn.mangomolo.com/ssch/smil:ssch.stream.smil/chunklist.m3u8"}, {"name": "SABC Lehae", "group": "SABC", "url": "https://sabctretalh.cdn.mangomolo.com/lehae/smil:lehae.stream.smil/master.m3u8"}]], ["Freevision", [{"name": "Cape Town TV", "group": "Freevision", "url": "https://cdn.freevisiontv.co.za/sttv/smil:ctv.stream.smil/chunklist.m3u8"}, {"name": "Soweto TV", "group": "Freevision", "url": "https://cdn.freevisiontv.co.za/sttv/smil:soweto.stream.smil/chunklist.m3u8"}, {"name": "1KZN TV", "group": "Freevision", "url": "https://cdn.freevisiontv.co.za/sttv/smil:1kzn.stream.smil/chunklist.m3u8"}, {"name": "Faith TV", "group": "Freevision", "url": "https://cdn.freevisiontv.co.za/sttv/smil:faith.stream.smil/chunklist.m3u8"}, {"name": "Tshwane TV", "group": "Freevision", "url": "https://cdn.freevisiontv.co.za/sttv/smil:tshwane.stream.smil/chunklist.m3u8"}, {"name": "Platinum North West TV", "group": "Freevision", "url": "https://cdn.freevisiontv.co.za/sttv/smil:pnwtv.stream.smil/chunklist.m3u8"}, {"name": "Mpuma Kapa TV", "group": "Freevision", "url": "https://senth3ta.cdn.mangomolo.com/mk/smil:mktv.stream.smil/chunklist.m3u8"}, {"name": "Phuthuloha TV", "group": "Freevision", "url": "https://senth3ta.cdn.mangomolo.com/pht/smil:pht.stream.smil/chunklist.m3u8"}, {"name": "BRICS Africa Channel", "group": "Freevision", "url": "https://cdn.freevisiontv.co.za/sttv/smil:brics.stream.smil/chunklist.m3u8"}, {"name": "TV BRICS English", "group": "Freevision", "url": "https://engbrics.mediacdn.ru/cdn/brics/english/tracks-v1a1/mono.m3u8"}, {"name": "SportsCast Africa", "group": "Freevision", "url": "https://sabcpluscdn.sportscastafrica.com/sca/smil:sca.stream.smil/chunklist.m3u8"}]], ["Entertainment", [{"name": "Nolly Africa", "group": "Entertainment", "url": "https://amg02784-amg02784c1-freevisionplay-worldwide-9725.playouts.now.amagi.tv/video_896504_p_2.m3u8"}, {"name": "Afroland Black Experience", "group": "Entertainment", "url": "https://ov.ottera.tv/channels/alt_black/master2300000.m3u8"}, {"name": "Afroland Comedy", "group": "Entertainment", "url": "https://ov.ottera.tv/channels/alt_com/master2300000.m3u8"}, {"name": "Afroland Romance", "group": "Entertainment", "url": "https://ov.ottera.tv/channels/alt_rom/master2300000.m3u8"}, {"name": "Afroland Crime", "group": "Entertainment", "url": "https://ov.ottera.tv/channels/alt_crime/master2300000.m3u8"}, {"name": "Afroland Drama", "group": "Entertainment", "url": "https://ov.ottera.tv/channels/alt_drama/master2300000.m3u8"}, {"name": "Afroland Nollywood", "group": "Entertainment", "url": "https://ov.ottera.tv/channels/alt_nolly/master2300000.m3u8"}, {"name": "Afroland TV", "group": "Entertainment", "url": "https://alt-al-freevision.otteravision.com/alt/al/al_1080p.m3u8"}, {"name": "Homebase TV", "group": "Entertainment", "url": "https://webstreaming-2.viewmedia.tv/web_022/Stream/playlist.m3u8"}, {"name": "BOK TV", "group": "Entertainment", "url": "https://livestream2.bokradio.co.za/hls/Bok5c.m3u8"}]], ["Nature", [{"name": "WildEarth", "group": "Nature", "url": "https://wildearth-xumo.amagi.tv/master.m3u8"}, {"name": "WildEarth (alt)", "group": "Nature", "url": "https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg01290-wildearth-oando/playlist.m3u8"}, {"name": "WildEarth TV", "group": "Nature", "url": "https://wildearth-samsungus.amagi.tv/playlist.m3u8"}, {"name": "Love Nature 4K Preview", "group": "Nature", "url": "https://amagi-stream-lovenature-1.wurl.tv/playlist.m3u8"}, {"name": "NASA TV HD", "group": "Nature", "url": "https://ntv1.akamaized.net/hls/live/2014075/NASA-TV1/master.m3u8"}, {"name": "WildEarth (alt)", "group": "Nature", "url": "https://wildearth-ono.amagi.tv/playlist/amg01290-wildearth-oando/playlist.m3u8"}, {"name": "Love Nature", "group": "Nature", "url": "https://amagi-stream-lovenature-1.wurl.tv/playlist.m3u8"}, {"name": "CGTN Nature", "group": "Nature", "url": "https://news.cgtn.com/resource/live/document/cgtn-doc.m3u8"}]], ["World News", [{"name": "Al Jazeera English", "group": "World News", "url": "https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8"}, {"name": "DW English", "group": "World News", "url": "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8"}, {"name": "CGTN", "group": "World News", "url": "https://news.cgtn.com/resource/live/english/cgtn-news.m3u8"}, {"name": "BBC News", "group": "World News", "url": "https://vs-hls-push-uk.live.fastly.md.bbci.co.uk/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/iptv_hd_abr_v1.m3u8"}, {"name": "NBC News NOW", "group": "World News", "url": "https://dai2.xumo.com/amagi_hls_data_xumo1212A-xumo-nbcnewsnow/CDN/master.m3u8"}, {"name": "ABC News Live", "group": "World News", "url": "https://abcnews-streams.akamaized.net/hls/live/2023560/abcnewshudson1/master.m3u8"}, {"name": "CBS News", "group": "World News", "url": "https://dai.google.com/linear/hls/event/Sid4xiTQTkCT1SLu6rjUSQ/master.m3u8"}, {"name": "Bloomberg", "group": "World News", "url": "https://liveproduseast.akamaized.net/us/Channel-USTV-AWS-virginia-1/Source-USTV-1000-1_live.m3u8"}, {"name": "India Today", "group": "World News", "url": "https://indiatodaylive.akamaized.net/hls/live/2014320/indiatoday/indiatodaylive/playlist.m3u8"}, {"name": "RT", "group": "World News", "url": "https://rt-glb.rttv.com/live/rtnews/playlist.m3u8"}, {"name": "TRT World", "group": "World News", "url": "https://tv-trtworld.live.trt.com.tr/master.m3u8"}, {"name": "Reuters", "group": "World News", "url": "https://amg00453-reuters-amg00453c1-rakuten-uk-2110.playouts.now.amagi.tv/playlist/amg00453-reuters-reuters-rakutenuk/playlist.m3u8"}, {"name": "The Guardian", "group": "World News", "url": "https://rakuten-guardian-1-ie.samsung.wurl.tv/playlist.m3u8"}, {"name": "LiveNOW from FOX", "group": "World News", "url": "https://fox-foxnewsnow-vizio.amagi.tv/playlist.m3u8"}, {"name": "CBC News Network", "group": "World News", "url": "https://dai2.xumo.com/amagi_hls_data_xumo1212A-redboxcbcnews/CDN/playlist.m3u8"}, {"name": "Ticker News", "group": "World News", "url": "https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01486-tickernews-tickernewsweb-ono/playlist.m3u8"}, {"name": "Taiwan+", "group": "World News", "url": "https://ythls.armelin.one/channel/UC7c6rvyAZLpKGk8ttVnpnLA.m3u8"}, {"name": "i24 News", "group": "World News", "url": "https://bcovlive-a.akamaihd.net/6e3dd61ac4c34d6f8fb9698b565b9f50/eu-central-1/5377161796001/playlist-all_dvr.m3u8"}, {"name": "Scripps News", "group": "World News", "url": "https://content.uplynk.com/channel/4bb4901b934c4e029fd4c1abfc766c37.m3u8"}, {"name": "USA Today", "group": "World News", "url": "https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg00731-gannettcoinc-usatodaynews-plex/playlist.m3u8"}, {"name": "Sky News Australia", "group": "World News", "url": "https://i.mjh.nz/sky-news-now.m3u8"}, {"name": "Global News (Canada)", "group": "World News", "url": "https://live.corusdigitaldev.com/groupd/live/49a91e7f-1023-430f-8d66-561055f3d0f7/live.isml/.m3u8"}, {"name": "CNN", "group": "World News", "url": "https://raw.githubusercontent.com/Alstruit/adaptive-streams/alstruit-10_23_us/streams/us/CNNUSA.us.m3u8"}, {"name": "CNN International", "group": "World News", "url": "https://turnerlive.warnermediacdn.com/hls/live/586495/cnngo/cnn_slate/VIDEO_0_3564000.m3u8"}, {"name": "TalkTV", "group": "World News", "url": "https://488f4ce4.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/TEctZ2JfVGFsa19ITFM/playlist.m3u8"}, {"name": "CGTN Documentary", "group": "World News", "url": "https://news.cgtn.com/resource/live/document/cgtn-doc.m3u8"}, {"name": "Arirang TV (Korea)", "group": "World News", "url": "https://amg01131-cba-amg01131c1-samsung-kr-2274.playouts.now.amagi.tv/playlist/amg01131-cba-arirangtv-samsungkr/playlist.m3u8"}, {"name": "NHK World Japan", "group": "World News", "url": "https://master.nhkworld.jp/nhkworld-tv/playlist/live.m3u8"}]], ["Business News", [{"name": "Cheddar News", "group": "Business News", "url": "https://hls.livecdn.io/cheddar.com/cheddar/playlist.m3u8"}, {"name": "Bloomberg TV+", "group": "Business News", "url": "https://bloomberg.com/media-manifest/streams/phoenix-us.m3u8"}, {"name": "Bloomberg TV Europe", "group": "Business News", "url": "https://bloomberg.com/media-manifest/streams/eu.m3u8"}, {"name": "Yahoo! Finance", "group": "Business News", "url": "https://d1ewctnvcwvvvu.cloudfront.net/playlist.m3u8"}, {"name": "CNBC Europe", "group": "Business News", "url": "https://amg01079-nbcuuk-amg01079c1-samsung-es-1261.playouts.now.amagi.tv/playlist/amg01079-nbcuukfast-cnbcpe-samsunges/playlist.m3u8"}]], ["Weather", [{"name": "AccuWeather NOW", "group": "Weather", "url": "https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg00684-accuweather-accuweather-plex/playlist.m3u8"}, {"name": "Fox Weather", "group": "Weather", "url": "https://247wlive.foxweather.com/stream/index.m3u8"}, {"name": "The Weather Network", "group": "Weather", "url": "https://jmp2.uk/plu-63da370e2e477400081cf8b6.m3u8"}]], ["USA", [{"name": "PBS", "group": "USA", "url": "https://pbs-hls-live.cdn.pbs.org/out/v1/9c4c990f44bb4767bb46271f326dd574/index.m3u8"}, {"name": "NASA TV", "group": "USA", "url": "https://ntv1.akamaized.net/hls/live/2013925/NASA-NTV1-HLS/master.m3u8"}, {"name": "C-SPAN", "group": "USA", "url": "https://cspan1-lh.akamaihd.net/i/cspan1_1@304727/master.m3u8"}]], ["Japan", [{"name": "NHK World-Japan", "group": "Japan", "url": "https://masterpl.hls.nhkworld.jp/hls/w/live/smarttv.m3u8"}, {"name": "NHK World-Japan (alt)", "group": "Japan", "url": "https://master.nhkworld.jp/nhkworld-tv/playlist/live.m3u8"}, {"name": "NHK World-Japan (alt2)", "group": "Japan", "url": "https://media-tyo.hls.nhkworld.jp/hls/w/live/master.m3u8"}, {"name": "NHK World-Japan (alt3)", "group": "Japan", "url": "https://media-osa.hls.nhkworld.jp/hls/w/live/master.m3u8"}, {"name": "Weathernews Japan", "group": "Japan", "url": "https://rch01e-alive-hls.akamaized.net/38fb45b25cdb05a1/out/v1/4e907bfabc684a1dae10df8431a84d21/index.m3u8"}, {"name": "NHK General TV", "group": "Japan", "url": "https://nhk4.mov3.co/hls/nhk.m3u8"}, {"name": "Nippon TV (JOAX)", "group": "Japan", "url": "https://ntv5.mov3.co/hls/ntv.m3u8"}, {"name": "Fuji TV (JOCX)", "group": "Japan", "url": "https://fujitv4.mov3.co/hls/fujitv.m3u8"}, {"name": "TV Asahi (JOEX)", "group": "Japan", "url": "https://tvasahi.mov3.co/hls/tvasahi.m3u8"}, {"name": "TBS (JORX)", "group": "Japan", "url": "https://tbs5.mov3.co/hls/tbs.m3u8"}, {"name": "TV Tokyo (JOTX)", "group": "Japan", "url": "https://tvtokyo.mov3.co/hls/tvtokyo.m3u8"}, {"name": "NHK World Premium", "group": "Japan", "url": "https://media-tyo.hls.nhkworld.jp/hls/wp/live/master.m3u8"}, {"name": "QVC Japan", "group": "Japan", "url": "https://d1flvb4iqlercm.cloudfront.net/live/live_1080p_2nd.m3u8"}]], ["China", [{"name": "CCTV-1", "group": "China", "url": "https://node1.olelive.com:6443/live/CCTV1HD/hls.m3u8"}, {"name": "CCTV-13 News", "group": "China", "url": "https://node1.olelive.com:6443/live/CCTV13HD/hls.m3u8"}]], ["Brazil", [{"name": "TV Brasil", "group": "Brazil", "url": "https://tvbrasil-stream.ebc.com.br/index.m3u8"}, {"name": "Canal Gov", "group": "Brazil", "url": "https://canalgov.ebc.com.br/index.m3u8"}]], ["Spanish", [{"name": "RTVE 24h", "group": "Spanish", "url": "https://rtvelivestream.akamaized.net/rtvesec/24h/24h_main_dvr.m3u8"}, {"name": "La 1", "group": "Spanish", "url": "https://rtvelivestream.akamaized.net/rtvesec/la1/la1_main_dvr.m3u8"}, {"name": "La 2", "group": "Spanish", "url": "https://rtvelivestream.akamaized.net/rtvesec/la2/la2_main_dvr.m3u8"}, {"name": "TVE Internacional", "group": "Spanish", "url": "https://rtvelivestream.akamaized.net/rtvesec/int/int_main_dvr.m3u8"}, {"name": "3Cat Info", "group": "Spanish", "url": "https://directes-tv-int.3catdirectes.cat/live-origin/canal324-hls/master.m3u8"}, {"name": "Antena 3", "group": "Spanish", "url": "https://a3livesim.akamaized.net/hls/live/2034680/antena3/master.m3u8"}]], ["Religious", [{"name": "Hope Channel Africa", "group": "Religious", "url": "https://jstre.am/live/jsl:i1onRBELcGV.m3u8"}, {"name": "Faith Africa", "group": "Religious", "url": "https://faithnow-hls.secdn.net/faithnow-holland-channel/play/FaithAfrica.smil/playlist.m3u8"}]], ["Radio", [{"name": "Omulunga Radio", "group": "Radio", "url": "http://sv2.famcast.co.za:8352/stream"}, {"name": "BBC Radio 1", "group": "Radio", "url": "http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one"}, {"name": "BBC Radio 2", "group": "Radio", "url": "http://stream.live.vc.bbcmedia.co.uk/bbc_radio_two"}, {"name": "BBC World Service", "group": "Radio", "url": "http://stream.live.vc.bbcmedia.co.uk/bbc_world_service"}, {"name": "NPR", "group": "Radio", "url": "https://npr-ice.streamguys1.com/live.mp3"}, {"name": "Metro FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/METROFMAAC.aac"}, {"name": "5FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/5FMAAC.aac"}, {"name": "SAfm", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/SAFMAAC.aac"}, {"name": "Ukhozi FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/UKHOZIFMAAC.aac"}, {"name": "Umhlobo Wenene FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/UMHLOBOWENENEAAC.aac"}, {"name": "Talk Radio 702", "group": "Radio", "url": "https://23543.live.streamtheworld.com/FM702AAC.aac"}, {"name": "CapeTalk", "group": "Radio", "url": "http://playerservices.streamtheworld.com/api/livestream-redirect/CAPE_TALK_SC"}, {"name": "947", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/FM947_SC"}, {"name": "Kfm 94.5", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/KFM.mp3"}, {"name": "Jacaranda FM", "group": "Radio", "url": "https://edge.iono.fm/xice/jacarandafm_live_medium.aac"}, {"name": "East Coast Radio", "group": "Radio", "url": "https://edge.iono.fm/xice/ecr_live_medium.aac"}, {"name": "Kaya FM", "group": "Radio", "url": "https://edge.iono.fm/xice/82_medium.mp3"}, {"name": "North West FM", "group": "Radio", "url": "https://edge.iono.fm/xice/91_low.aac"}, {"name": "YFM", "group": "Radio", "url": "https://streaming.fabrik.fm/yfm/echocast/audio/index.m3u8"}, {"name": "Radio 2000", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO2000AAC_SC"}, {"name": "Lesedi FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/LESEDIAAC.aac"}, {"name": "Motsweding FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/MOTSWEDINGAAC.aac"}, {"name": "RSG (Radio Sonder Grense)", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/RSGAAC.aac"}, {"name": "Ligwalagwala FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/LIGWALAGWALAAAC.aac"}, {"name": "Munghana Lonene FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/MUNGANALONENEAAC.aac"}, {"name": "Thobela FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/THOBELAAAC.aac"}, {"name": "Phalaphala FM", "group": "Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/PHALAPHALAAAC.aac"}]], ["Anime", [{"name": "Toonami Aftermath East", "group": "Anime", "url": "http://api.toonamiaftermath.com:3000/est/playlist.m3u8"}, {"name": "Toonami Aftermath Movies", "group": "Anime", "url": "http://api.toonamiaftermath.com:3000/movies/playlist.m3u8"}, {"name": "Toonami Aftermath Radio", "group": "Anime", "url": "http://api.toonamiaftermath.com:3000/radio/playlist.m3u8"}]], ["Cartoons", [{"name": "Duck TV", "group": "Cartoons", "url": "https://ducktv-samsung.amagi.tv/playlist.m3u8"}, {"name": "PBS Kids Live", "group": "Cartoons", "url": "https://livestream.pbskids.org/out/v1/d68744b8ee7645dca44f2c8d2d6c1b33/index.m3u8"}]], ["EDM", [{"name": "Defected Radio TV Stream", "group": "EDM", "url": "https://stream.zeno.fm/4v094p23438uv.m3u8"}, {"name": "Chillhop Beats 24/7", "group": "EDM", "url": "https://stream.zeno.fm/03738v86208uv.m3u8"}, {"name": "SomaFM Beat Blender", "group": "EDM", "url": "https://ice1.somafm.com/beatblender-128-mp3"}, {"name": "SomaFM The Trip", "group": "EDM", "url": "https://ice1.somafm.com/thetrip-128-mp3"}]], ["House", [{"name": "Clubbing TV Live", "group": "House", "url": "https://clubbingtv-samsung-us.amagi.tv/playlist.m3u8"}, {"name": "SomaFM Groove Salad", "group": "House", "url": "https://ice1.somafm.com/groovesalad-256-mp3"}, {"name": "1.FM Deep House", "group": "House", "url": "https://strmreg.1.fm/deephouse_mobile_mp3"}, {"name": "House Fusion Radio", "group": "House", "url": "https://stream.radio.co/s3f1c5e8e8/listen"}, {"name": "SomaFM Secret Agent", "group": "House", "url": "https://ice1.somafm.com/secretagent-128-mp3"}, {"name": "SomaFM Illinois Street Lounge", "group": "House", "url": "https://ice1.somafm.com/illstreet-128-mp3"}]], ["Kids", [{"name": "AfroKiddos", "group": "Kids", "url": "https://ov.ottera.tv/channels/alt_ak/master900000.m3u8"}, {"name": "3ABN Kids Network", "group": "Kids", "url": "https://3abn.bozztv.com/3abn2/Kids_live/smil:Kids_live.smil/playlist.m3u8"}, {"name": "90's Kids", "group": "Kids", "url": "https://jmp2.uk/plu-6452c814939a590008567a3b.m3u8"}, {"name": "Cartoon Classics", "group": "Kids", "url": "https://daiconnect.com/live/hls/tvup/rk-cartoonclassics/578f4b7eb725168349ec0af81b21d388/index.m3u8"}, {"name": "4 Fun Kids", "group": "Kids", "url": "https://stream.4fun.tv:8889/hls/4fk_high/index.m3u8"}, {"name": "Duck TV", "group": "Kids", "url": "https://ducktv-samsung.amagi.tv/playlist.m3u8"}, {"name": "PBS Kids", "group": "Kids", "url": "https://livestream.pbskids.org/out/v1/d68744b8ee7645dca44f2c8d2d6c1b33/index.m3u8"}]], ["News", [{"name": "LN24SA", "group": "News", "url": "https://cdnstack.internetmultimediaonline.org/ln24/ln24.stream/playlist.m3u8"}, {"name": "Al Jazeera English", "group": "News", "url": "https://live-hls-web-aje.getty.cloud.aljazeera.net/1000/Master.m3u8"}, {"name": "Euronews English", "group": "News", "url": "https://euronews-euronews-express-1-us.samsung.wurl.tv/playlist.m3u8"}, {"name": "Africanews English", "group": "News", "url": "https://africanews-africanews-live-1-fr.samsung.wurl.tv/playlist.m3u8"}]], ["Reggae", [{"name": "Reggae Sun TV", "group": "Reggae", "url": "https://stream.ecable.tv/reggaesun/index.m3u8"}, {"name": "Roots Reggae Radio Stream", "group": "Reggae", "url": "https://stream.zeno.fm/f3wvbb10118uv.m3u8"}, {"name": "SomaFM Heavyweight Reggae", "group": "Reggae", "url": "https://ice5.somafm.com/reggae-256-mp3"}, {"name": "Alpha Boys School Radio", "group": "Reggae", "url": "http://alphaboys-live.streamguys1.com/alphaboys.mp3"}, {"name": "Irie FM (Jamaica)", "group": "Reggae", "url": "https://stream.iriefm.net:8008/stream"}, {"name": "FIP Reggae", "group": "Reggae", "url": "http://icecast.radiofrance.fr/fipreggae-hifi.aac"}]], ["RnB & Soul", [{"name": "Classic R&B & Soul TV", "group": "RnB & Soul", "url": "https://stream.zeno.fm/2y34z9w2u38uv.m3u8"}, {"name": "Smooth Urban R&B", "group": "RnB & Soul", "url": "https://stream.zeno.fm/09614486208uv.m3u8"}]], ["African", [{"name": "GNF TV", "group": "African", "url": "https://oqgdrb8my4rm-hls-live.5centscdn.com/GNF02/bcea197d8b00f79cb716c6288a861000.sdp/playlist.m3u8"}, {"name": "Loveworld SAT", "group": "African", "url": "https://cdnstack.internetmultimediaonline.org/lwsat/lwsat.stream/index.m3u8"}, {"name": "NuView TV", "group": "African", "url": "https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_002/Stream/playlist.m3u8"}, {"name": "ROV TV", "group": "African", "url": "https://viewmedia7219.bozztv.com/wmedia/viewmedia100/web_012/Stream/playlist.m3u8"}]], ["RnB Soul", [{"name": "SomaFM Seven Inch Soul", "group": "RnB Soul", "url": "https://ice5.somafm.com/7soul-128-mp3"}, {"name": "SomaFM Underground 80s", "group": "RnB Soul", "url": "https://ice1.somafm.com/u80s-128-mp3"}, {"name": "FIP Groove", "group": "RnB Soul", "url": "https://stream.radiofrance.fr/fipgroove/fipgroove_hifi.m3u8"}]], ["Chill", [{"name": "SomaFM Drone Zone", "group": "Chill", "url": "https://ice1.somafm.com/dronezone-256-mp3"}, {"name": "SomaFM Space Station", "group": "Chill", "url": "https://ice1.somafm.com/spacestation-128-mp3"}, {"name": "SomaFM Deep Space One", "group": "Chill", "url": "https://ice1.somafm.com/deepspaceone-128-mp3"}, {"name": "SomaFM Lush", "group": "Chill", "url": "https://ice1.somafm.com/lush-128-mp3"}]], ["Jazz", [{"name": "SomaFM Sonic Universe", "group": "Jazz", "url": "https://ice1.somafm.com/sonicuniverse-128-mp3"}, {"name": "FIP Jazz", "group": "Jazz", "url": "http://icecast.radiofrance.fr/fipjazz-hifi.aac"}]], ["Eclectic", [{"name": "Radio Paradise", "group": "Eclectic", "url": "https://stream.radioparadise.com/aac-320"}, {"name": "SomaFM Indie Pop Rocks", "group": "Eclectic", "url": "https://ice1.somafm.com/indiepop-128-mp3"}]], ["North America", [{"name": "CBC News Network", "group": "North America", "url": "https://dai2.xumo.com/amagi_hls_data_xumo1212A-redboxcbcnews/CDN/playlist.m3u8"}, {"name": "PBS National", "group": "North America", "url": "https://pbs-hls-live.cdn.pbs.org/out/v1/9c4c990f44bb4767bb46271f326dd574/index.m3u8"}, {"name": "C-SPAN 1", "group": "North America", "url": "https://cspan1-lh.akamaihd.net/i/cspan1_1@304727/master.m3u8"}, {"name": "NASA TV", "group": "North America", "url": "https://ntv1.akamaized.net/hls/live/2013925/NASA-NTV1-HLS/master.m3u8"}, {"name": "NBC News NOW", "group": "North America", "url": "https://dai2.xumo.com/amagi_hls_data_xumo1212A-xumo-nbcnewsnow/CDN/master.m3u8"}, {"name": "ABC News Live", "group": "North America", "url": "https://abcnews-streams.akamaized.net/hls/live/2023560/abcnewshudson1/master.m3u8"}, {"name": "CBS News", "group": "North America", "url": "https://dai.google.com/linear/hls/event/Sid4xiTQTkCT1SLu6rjUSQ/master.m3u8"}, {"name": "Bloomberg US", "group": "North America", "url": "https://liveproduseast.akamaized.net/us/Channel-USTV-AWS-virginia-1/Source-USTV-1000-1_live.m3u8"}]], ["Canada Radio", [{"name": "CBC Radio One Toronto", "group": "Canada Radio", "url": "https://cbcradiolive.akamaized.net/hls/live/2041037/ES_R1ETR/master.m3u8"}, {"name": "CBC Music", "group": "Canada Radio", "url": "https://cbcradiolive.akamaized.net/hls/live/2041057/ES_R2ETR/master.m3u8"}, {"name": "ICI Première", "group": "Canada Radio", "url": "https://rcavlive.akamaized.net/hls/live/704022/xcanpremlive/master.m3u8"}]], ["South America", [{"name": "TV Brasil", "group": "South America", "url": "https://tvbrasil-stream.ebc.com.br/index.m3u8"}, {"name": "Canal Gov (Brazil)", "group": "South America", "url": "https://canalgov.ebc.com.br/index.m3u8"}, {"name": "TV Cultura (Brazil)", "group": "South America", "url": "https://stream.ads.totally.tv/live/tv-cultura/playlist.m3u8"}, {"name": "TeleSUR", "group": "South America", "url": "https://main.tdem.live/tdem/telesur/playlist.m3u8"}, {"name": "RTVE 24h (Spain/Latam friendly)", "group": "South America", "url": "https://rtvelivestream.akamaized.net/rtvesec/24h/24h_main_dvr.m3u8"}]], ["US Radio", [{"name": "NPR News", "group": "US Radio", "url": "https://npr-ice.streamguys1.com/live.mp3"}, {"name": "WAMU (NPR DC)", "group": "US Radio", "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/WAMUFM.mp3"}, {"name": "KEXP Seattle", "group": "US Radio", "url": "https://kexp-mp3-128.streamguys1.com/kexp128.mp3"}]], ["Far East", [{"name": "NHK World Japan", "group": "Far East", "url": "https://master.nhkworld.jp/nhkworld-tv/playlist/live.m3u8"}, {"name": "NHK World (alt)", "group": "Far East", "url": "https://media-tyo.hls.nhkworld.jp/hls/w/live/master.m3u8"}, {"name": "Arirang TV", "group": "Far East", "url": "https://amg01131-cba-amg01131c1-samsung-kr-2274.playouts.now.amagi.tv/playlist/amg01131-cba-arirangtv-samsungkr/playlist.m3u8"}, {"name": "CNA (Channel News Asia)", "group": "Far East", "url": "https://d2e1asnsl7br7b.cloudfront.net/7782e205e72f43aeb4a48ec97f66cbfb/index.m3u8"}, {"name": "CGTN", "group": "Far East", "url": "https://news.cgtn.com/resource/live/english/cgtn-news.m3u8"}, {"name": "Taiwan+", "group": "Far East", "url": "https://ythls.armelin.one/channel/UC7c6rvyAZLpKGk8ttVnpnLA.m3u8"}]], ["Australia", [{"name": "ABC News Australia", "group": "Australia", "url": "https://abc-news-dmd-streams-1.akamaized.net/out/v1/701126012d044971b3fa89406a440133/index.m3u8"}, {"name": "ABC News (alt)", "group": "Australia", "url": "https://c.mjh.nz/abc-news.m3u8"}, {"name": "Sky News Australia", "group": "Australia", "url": "https://i.mjh.nz/sky-news-now.m3u8"}]], ["Aus/NZ Radio", [{"name": "ABC News Radio", "group": "Aus/NZ Radio", "url": "https://mediaserviceslive.akamaized.net/hls/live/2038311/newsradio/index.m3u8"}, {"name": "ABC Radio Australia", "group": "Aus/NZ Radio", "url": "https://mediaserviceslive.akamaized.net/hls/live/2038267/raeng/index.m3u8"}, {"name": "triple j", "group": "Aus/NZ Radio", "url": "https://mediaserviceslive.akamaized.net/hls/live/2100183/triplejhottest/index.m3u8"}, {"name": "RNZ National", "group": "Aus/NZ Radio", "url": "http://radionz-ice.streamguys.com/national.mp3"}, {"name": "RNZ Concert", "group": "Aus/NZ Radio", "url": "http://radionz-ice.streamguys.com/Concert_aac128"}, {"name": "RNZ Pacific", "group": "Aus/NZ Radio", "url": "http://radionz-ice.streamguys.com/international.mp3"}]], ["Russia", [{"name": "RT News", "group": "Russia", "url": "https://rt-glb.rttv.com/live/rtnews/playlist.m3u8"}, {"name": "RT Documentary", "group": "Russia", "url": "https://rt-rtd.rttv.com/live/rtdoc/playlist.m3u8"}]], ["Europe", [{"name": "Euronews", "group": "Europe", "url": "https://euronews-euronews-express-1-us.samsung.wurl.tv/playlist.m3u8"}, {"name": "DW English", "group": "Europe", "url": "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8"}, {"name": "France 24 English", "group": "Europe", "url": "https://static.france24.com/live/F24_EN_HI_HLS/live_tv.m3u8"}, {"name": "Arte", "group": "Europe", "url": "https://artesimulcast.akamaized.net/hls/live/2031003/artelive_fr/index.m3u8"}, {"name": "TRT World", "group": "Europe", "url": "https://tv-trtworld.live.trt.com.tr/master.m3u8"}]], ["Africa", [{"name": "Africanews English", "group": "Africa", "url": "https://cdn-euronews.akamaized.net/live/eds/africanews-en/25049/index.m3u8"}, {"name": "TV BRICS English", "group": "Africa", "url": "https://engbrics.mediacdn.ru/cdn/brics/english/tracks-v1a1/mono.m3u8"}]], ["Muslim World", [{"name": "Al Jazeera Arabic", "group": "Muslim World", "url": "https://live-hls-apps-aja-fa.getaj.net/AJA/index.m3u8"}, {"name": "Al Arabiya", "group": "Muslim World", "url": "https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8"}, {"name": "Sky News Arabia", "group": "Muslim World", "url": "https://stream.skynewsarabia.com/hls/sna.m3u8"}, {"name": "France 24 Arabic", "group": "Muslim World", "url": "https://static.france24.com/live/F24_AR_HI_HLS/live_tv.m3u8"}, {"name": "DW Arabic", "group": "Muslim World", "url": "https://dwamdstream103.akamaized.net/hls/live/2015526/dwstream103/index.m3u8"}, {"name": "CGTN Arabic", "group": "Muslim World", "url": "https://news.cgtn.com/resource/live/arabic/cgtn-a.m3u8"}, {"name": "TRT Arabi", "group": "Muslim World", "url": "https://tv-trtarabi.live.trt.com.tr/master.m3u8"}, {"name": "Al Araby TV", "group": "Muslim World", "url": "https://live.kwikmotion.com/alaraby1live/alaraby_abr/playlist.m3u8"}]], ["Asia", [{"name": "India Today", "group": "Asia", "url": "https://indiatodaylive.akamaized.net/hls/live/2014320/indiatoday/indiatodaylive/playlist.m3u8"}, {"name": "DD India", "group": "Asia", "url": "https://d2e1asnsl7br7b.cloudfront.net/7782e205e72f43aeb4a48ec97f66cbfb/index.m3u8"}]], ["Live Cams", [{"name": "NASA TV (Public)", "group": "Live Cams", "url": "https://ntv1.akamaized.net/hls/live/2013925/NASA-NTV1-HLS/master.m3u8"}, {"name": "WildEarth Safari", "group": "Live Cams", "url": "https://wildearth-xumo.amagi.tv/master.m3u8"}, {"name": "WildEarth (alt)", "group": "Live Cams", "url": "https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg01290-wildearth-oando/playlist.m3u8"}, {"name": "Love Nature", "group": "Live Cams", "url": "https://amagi-stream-lovenature-1.wurl.tv/playlist.m3u8"}, {"name": "EarthCam Times Square (example)", "group": "Live Cams", "url": "https://videos-3.earthcam.com/fecnetwork/9974.flv/playlist.m3u8"}]]];
+
+const video = document.getElementById('video');
+const audio = document.getElementById('audio');
+const placeholder = document.getElementById('placeholder');
+const nowPlaying = document.getElementById('nowPlaying');
+const statusEl = document.getElementById('status');
+const groupsEl = document.getElementById('groups');
+const searchInput = document.getElementById('search');
+const countInfo = document.getElementById('countInfo');
+
+let hls = null;
+let currentUrl = null;
+let totalChannels = 0;
+
+function isAudioUrl(url) {
+  const u = url.toLowerCase();
+  return u.endsWith('.mp3') || u.endsWith('.aac') || u.includes('/aac') ||
+         u.includes('streamtheworld') || u.includes('iono.fm') ||
+         u.includes('streamguys') || u.includes('bbcmedia') ||
+         u.includes('zeno.fm') || u.includes('famcast') ||
+         u.includes('radio.co') || u.includes('icecast');
+}
+
+function setStatus(msg, type='') {
+  statusEl.textContent = msg;
+  statusEl.className = 'status ' + type;
+}
+
+function stopAll() {
+  if (hls) { hls.destroy(); hls = null; }
+  video.pause(); video.removeAttribute('src'); video.load();
+  audio.pause(); audio.removeAttribute('src'); audio.load();
+  video.style.display = 'none';
+  audio.style.display = 'none';
+}
+
+function playChannel(name, url) {
+  if (url === currentUrl) return;
+  currentUrl = url;
+  stopAll();
+  placeholder.style.display = 'none';
+  nowPlaying.innerHTML = '<strong>' + name + '</strong>';
+  setStatus('Loading…');
+
+  const isAudio = isAudioUrl(url);
+
+  if (isAudio) {
+    audio.style.display = 'block';
+    audio.src = url;
+    audio.play().then(() => setStatus('Playing · Audio', 'ok'))
+      .catch(e => setStatus('Error: ' + e.message, 'error'));
+  } else {
+    video.style.display = 'block';
+    if (url.includes('.m3u8') && window.Hls && Hls.isSupported()) {
+      hls = new Hls({ enableWorker: true });
+      hls.loadSource(url);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().then(() => setStatus('Playing', 'ok'))
+          .catch(e => setStatus('Play blocked: ' + e.message, 'error'));
+      });
+      hls.on(Hls.Events.ERROR, (ev, data) => {
+        if (data.fatal) setStatus('Stream error', 'error');
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = url;
+      video.play().then(() => setStatus('Playing', 'ok'))
+        .catch(e => setStatus('Error: ' + e.message, 'error'));
+    } else {
+      video.src = url;
+      video.play().then(() => setStatus('Playing', 'ok'))
+        .catch(e => setStatus('Error: ' + e.message, 'error'));
+    }
+  }
+
+  document.querySelectorAll('.channel').forEach(el => {
+    el.classList.toggle('active', el.dataset.url === url);
+  });
+}
+
+function renderGroups(filter = '') {
+  groupsEl.innerHTML = '';
+  totalChannels = 0;
+  const q = filter.toLowerCase().trim();
+
+  for (const [groupName, channels] of CHANNELS) {
+    const filtered = q
+      ? channels.filter(c => c.name.toLowerCase().includes(q) || groupName.toLowerCase().includes(q))
+      : channels;
+    if (!filtered.length) continue;
+    totalChannels += filtered.length;
+
+    const groupDiv = document.createElement('div');
+    const header = document.createElement('div');
+    header.className = 'group-header';
+    header.textContent = groupName + ' · ' + filtered.length;
+    header.onclick = () => groupDiv.classList.toggle('collapsed');
+    groupDiv.appendChild(header);
+
+    const channelsDiv = document.createElement('div');
+    channelsDiv.className = 'channels';
+    filtered.forEach(ch => {
+      const el = document.createElement('div');
+      el.className = 'channel';
+      el.dataset.url = ch.url;
+      el.innerHTML = ch.name + (isAudioUrl(ch.url) ? '<span class="type">♪</span>' : '');
+      el.onclick = () => playChannel(ch.name, ch.url);
+      channelsDiv.appendChild(el);
+    });
+    groupDiv.appendChild(channelsDiv);
+    groupsEl.appendChild(groupDiv);
+  }
+  countInfo.textContent = totalChannels + ' channels';
+}
+
+searchInput.addEventListener('input', () => renderGroups(searchInput.value));
+renderGroups();
+</script>
+</body>
+</html>
