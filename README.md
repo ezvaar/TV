@@ -6,7 +6,7 @@ A lightweight, offline-capable HTML player with curated free-to-air and public s
 
 ## Quick Start
 
-1. Download [`ezvaarTV.html`](ezvaarTV.html)
+1. Download [`index.html`](index.html)
 2. Open it in any modern browser (Chrome, Edge, Firefox, Safari)
 3. Click a channel and watch / listen
 
@@ -24,7 +24,7 @@ No install. No account. No app store.
 
 If GitHub Pages is enabled on this repo:
 
-**https://ezvaar.github.io/tv/**
+**https://ezvaar.github.io/TV/**
 
 ## Notes
 
